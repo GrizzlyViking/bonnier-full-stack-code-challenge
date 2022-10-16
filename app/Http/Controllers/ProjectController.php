@@ -7,6 +7,7 @@ use Illuminate\Http\Request;
 
 class ProjectController extends Controller
 {
+
     public function __construct()
     {
         $this->middleware('auth');
@@ -25,14 +26,21 @@ class ProjectController extends Controller
 
     public function add(Request $request)
     {
+        $request->validate([
+            'name' => 'required|unique:projects|max:255',
+        ]);
+
         Project::create([
-            'name' => $request->get('name')
+            'name' => $request->get('name'),
         ]);
         return response()->json(['status' => 'success']);
     }
 
     public function update(Request $request)
     {
+        $request->validate([
+            'name' => 'required|unique:projects,name,' . $request->get('id'),
+        ]);
         $project = Project::find($request->get('id'));
         $project->name = $request->get('name');
         $project->save();
@@ -44,4 +52,5 @@ class ProjectController extends Controller
         Project::find($request->get('id'))->delete();
         return response()->json(['status' => 'success']);
     }
+
 }
