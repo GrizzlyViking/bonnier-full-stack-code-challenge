@@ -23,24 +23,21 @@
                 </tr>
                 </thead>
                 <tbody>
-                    <tr v-for="project in projects">
+                    <tr v-for="(project, index) in list" :key="project.name">
                         <td v-text="project.name"></td>
-                        <td v-text="project.entries.length"></td>
-                        <td>
-                            <!-- TODO: Calculate total hours spent -->
-                            0
-                        </td>
+                        <td v-text="getEntries(project)"></td>
+                        <td v-text="project.totalProjectTime"></td>
                         <td class="text-right">
                             <button type="button" class="btn btn-sm btn-dark" @click.prevent="editProject(project)">Edit</button>
-                            <button type="button" class="btn btn-sm btn-danger">Delete</button>
+                            <button type="button" class="btn btn-sm btn-danger" @click.prevent="deleteProject(project, index)">Delete</button>
                             <a :href="`/projects/${project.id}`" class="btn btn-sm btn-secondary">Details</a>
                         </td>
                     </tr>
                 </tbody>
             </table>
         </div>
-        <add-project ref="add"></add-project>
-        <edit-project ref="edit"></edit-project>
+        <add-project @added="refreshProjects" ref="add"></add-project>
+        <edit-project @projectUpdated="refreshProjects" ref="edit"></edit-project>
     </div>
 </template>
 
@@ -55,12 +52,31 @@ export default {
         'edit-project': EditProject
     },
     props: ['projects'],
+    data() {
+        return {
+            list: this.projects
+        }
+    },
     methods: {
         addProject() {
             this.$refs.add.open();
         },
         editProject(project) {
             this.$refs.edit.open(project);
+        },
+        deleteProject(project, index) {
+            axios.post('/projects/delete', {
+                id: project.id,
+            });
+            this.list.splice(index, 1);
+        },
+        refreshProjects() {
+            axios.get('/projects').then(response => {
+                this.list = response.data.projects;
+            });
+        },
+        getEntries(project) {
+            return project.entries ? project.entries.length : 0;
         }
     }
 }
