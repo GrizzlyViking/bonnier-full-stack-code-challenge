@@ -1954,8 +1954,12 @@ __webpack_require__.r(__webpack_exports__);
       this.projectName = '';
     },
     submit: function submit() {
+      var _this = this;
+
       axios.post('/projects/add', {
         name: this.projectName
+      }).then(function (response) {
+        _this.$emit('added', _this.projectName);
       });
       $(this.$refs.modal).modal('hide');
     }
@@ -2031,9 +2035,13 @@ __webpack_require__.r(__webpack_exports__);
       this.projectName = '';
     },
     submit: function submit() {
+      var _this = this;
+
       axios.post('/projects/update', {
         id: this.project.id,
         name: this.projectName
+      }).then(function (response) {
+        _this.$emit('projectUpdated', _this.project.id);
       });
       $(this.$refs.modal).modal('hide');
     }
@@ -2093,16 +2101,66 @@ __webpack_require__.r(__webpack_exports__);
   props: ['project'],
   data: function data() {
     return {
-      running: false
+      running: false,
+      startTime: 0,
+      stopTime: 0,
+      listOfEntries: [],
+      totalTime: ''
     };
   },
   methods: {
     startTimer: function startTimer() {
-      this.running = true; // TODO: Implement start functionality
+      this.running = true;
+
+      if (this.startTime === 0) {
+        this.startTime = Date.now().valueOf();
+      }
+
+      this.addEntry();
     },
     stopTimer: function stopTimer() {
-      this.running = false; // TODO: Implement stop functionality
+      this.running = false;
+      this.stopTime = Date.now().valueOf();
+      this.addEntry();
+    },
+    addEntry: function addEntry() {
+      var _this = this;
+
+      axios.post('/projects/entry/upsert', {
+        start: this.startTime,
+        end: this.stopTime,
+        project_id: this.project.id
+      }).then(function (response) {
+        _this.refreshEntries();
+
+        _this.refreshProjectTime();
+      });
+    },
+    refreshEntries: function refreshEntries() {
+      var _this2 = this;
+
+      axios.get('/projects/' + this.project.id + '/entries').then(function (response) {
+        _this2.listOfEntries = response.data.entries;
+      });
+    },
+    refreshProjectTime: function refreshProjectTime() {
+      var _this3 = this;
+
+      axios.get('/projects/' + this.project.id + '/totalTime').then(function (response) {
+        _this3.totalTime = response.data.totalProjectTime;
+      });
+    },
+    dateTimeString: function dateTimeString(_dateTimeString) {
+      var timestamp = new Date(_dateTimeString);
+      return timestamp.toDateString() + ' ' + timestamp.toLocaleTimeString();
+    },
+    currentState: function currentState(entry) {
+      return this.running ? 'running' : entry.humanReadable;
     }
+  },
+  mounted: function mounted() {
+    this.refreshEntries();
+    this.refreshProjectTime();
   }
 });
 
@@ -2162,9 +2220,6 @@ __webpack_require__.r(__webpack_exports__);
 //
 //
 //
-//
-//
-//
 
 
 /* harmony default export */ __webpack_exports__["default"] = ({
@@ -2174,12 +2229,33 @@ __webpack_require__.r(__webpack_exports__);
     'edit-project': _EditProject__WEBPACK_IMPORTED_MODULE_1__["default"]
   },
   props: ['projects'],
+  data: function data() {
+    return {
+      list: this.projects
+    };
+  },
   methods: {
     addProject: function addProject() {
       this.$refs.add.open();
     },
     editProject: function editProject(project) {
       this.$refs.edit.open(project);
+    },
+    deleteProject: function deleteProject(project, index) {
+      axios.post('/projects/delete', {
+        id: project.id
+      });
+      this.list.splice(index, 1);
+    },
+    refreshProjects: function refreshProjects() {
+      var _this = this;
+
+      axios.get('/projects').then(function (response) {
+        _this.list = response.data.projects;
+      });
+    },
+    getEntries: function getEntries(project) {
+      return project.entries ? project.entries.length : 0;
     }
   }
 });
@@ -38125,8 +38201,12 @@ var render = function() {
   return _c("div", { staticClass: "card" }, [
     _c("div", { staticClass: "card-header" }, [
       _c("div", { staticClass: "row" }, [
-        _c("div", { staticClass: "col-10" }, [
+        _c("div", { staticClass: "col-3" }, [
           _c("h4", { domProps: { textContent: _vm._s(_vm.project.name) } })
+        ]),
+        _vm._v(" "),
+        _c("div", { staticClass: "col-7" }, [
+          _c("div", { domProps: { textContent: _vm._s(_vm.totalTime) } })
         ]),
         _vm._v(" "),
         _c("div", { staticClass: "col-2" }, [
@@ -38186,15 +38266,19 @@ var render = function() {
       _vm._v(" "),
       _c(
         "tbody",
-        _vm._l(_vm.project.entries, function(entry) {
-          return _c("tr", [
-            _c("td", { domProps: { textContent: _vm._s(entry.start) } }),
+        _vm._l(_vm.listOfEntries, function(entry) {
+          return _c("tr", { key: entry.id }, [
+            _c("td", {
+              domProps: { textContent: _vm._s(_vm.dateTimeString(entry.start)) }
+            }),
             _vm._v(" "),
-            _c("td", { domProps: { textContent: _vm._s(entry.end) } }),
+            _c("td", {
+              domProps: { textContent: _vm._s(_vm.dateTimeString(entry.end)) }
+            }),
             _vm._v(" "),
-            _c("td", [
-              _vm._v("\n                    0 hours\n                ")
-            ])
+            _c("td", {
+              domProps: { textContent: _vm._s(_vm.currentState(entry)) }
+            })
           ])
         }),
         0
@@ -38273,17 +38357,17 @@ var render = function() {
           _vm._v(" "),
           _c(
             "tbody",
-            _vm._l(_vm.projects, function(project) {
-              return _c("tr", [
+            _vm._l(_vm.list, function(project, index) {
+              return _c("tr", { key: project.name }, [
                 _c("td", { domProps: { textContent: _vm._s(project.name) } }),
                 _vm._v(" "),
                 _c("td", {
-                  domProps: { textContent: _vm._s(project.entries.length) }
+                  domProps: { textContent: _vm._s(_vm.getEntries(project)) }
                 }),
                 _vm._v(" "),
-                _c("td", [
-                  _vm._v("\n                        0\n                    ")
-                ]),
+                _c("td", {
+                  domProps: { textContent: _vm._s(project.totalProjectTime) }
+                }),
                 _vm._v(" "),
                 _c("td", { staticClass: "text-right" }, [
                   _c(
@@ -38305,7 +38389,13 @@ var render = function() {
                     "button",
                     {
                       staticClass: "btn btn-sm btn-danger",
-                      attrs: { type: "button" }
+                      attrs: { type: "button" },
+                      on: {
+                        click: function($event) {
+                          $event.preventDefault()
+                          return _vm.deleteProject(project, index)
+                        }
+                      }
                     },
                     [_vm._v("Delete")]
                   ),
@@ -38326,9 +38416,12 @@ var render = function() {
         ])
       ]),
       _vm._v(" "),
-      _c("add-project", { ref: "add" }),
+      _c("add-project", { ref: "add", on: { added: _vm.refreshProjects } }),
       _vm._v(" "),
-      _c("edit-project", { ref: "edit" })
+      _c("edit-project", {
+        ref: "edit",
+        on: { projectUpdated: _vm.refreshProjects }
+      })
     ],
     1
   )

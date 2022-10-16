@@ -49,6 +49,7 @@ class ProjectTest extends TestCase
                 'name' => $project->name
             ]
         );
+
         $response->assertStatus(Response::HTTP_OK);
     }
 }
