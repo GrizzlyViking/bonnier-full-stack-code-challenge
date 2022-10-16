@@ -2,6 +2,11 @@
 
 namespace App\Http\Controllers;
 
+use App\Entry;
+use App\Project;
+use Illuminate\Support\Carbon;
+use \Illuminate\Support\Facades\Request;
+
 class EntryController extends Controller
 {
     public function __construct()
@@ -9,13 +14,24 @@ class EntryController extends Controller
         $this->middleware('auth');
     }
 
-    public function start()
+    public function index($project_id)
     {
-        // TODO: Implement starting new entry
+        return response()->json(['entries' => Entry::where('project_id', $project_id)->get()]);
     }
 
-    public function stop()
+    public function upsert()
     {
-        // TODO: Implement stopping entry
+        Entry::updateOrCreate(
+            ['start' => Carbon::createFromTimestamp(floor(Request::post('start')/1000)), 'project_id' => Request::post('project_id')],
+            ['end' => Carbon::createFromTimestamp(floor(Request::post('end')/1000))]
+        );
     }
+
+    public function projectTotalTime($project_id)
+    {
+        return response()->json([
+            'totalProjectTime' => Project::find($project_id)->totalProjectTime
+        ]);
+    }
+
 }

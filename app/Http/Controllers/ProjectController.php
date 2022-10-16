@@ -12,6 +12,11 @@ class ProjectController extends Controller
         $this->middleware('auth');
     }
 
+    public function index()
+    {
+        return response()->json(['projects' => Project::all()]);
+    }
+
     public function show(int $projectID)
     {
         $project = Project::with('entries')->find($projectID);
@@ -31,6 +36,12 @@ class ProjectController extends Controller
         $project = Project::find($request->get('id'));
         $project->name = $request->get('name');
         $project->save();
+        return response()->json(['status' => 'success']);
+    }
+
+    public function delete(Request $request)
+    {
+        Project::find($request->get('id'))->delete();
         return response()->json(['status' => 'success']);
     }
 }

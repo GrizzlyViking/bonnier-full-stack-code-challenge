@@ -57,6 +57,8 @@ export default {
             axios.post('/projects/update', {
                 id: this.project.id,
                 name: this.projectName
+            }).then(response => {
+                this.$emit('projectUpdated', this.project.id);
             });
             $(this.$refs.modal).modal('hide');
         }
